@@ -11,5 +11,6 @@ Route::get('/scrape-results', [DomainController::class, 'showResults']);
 
 Route::post('/enter-domain', [DomainController::class, 'domainCheck']); // Traite le formulaire et vérifie le domaine
 
+Route::get('/whois', [DomainController::class, 'getDomainInfo']);
 
 

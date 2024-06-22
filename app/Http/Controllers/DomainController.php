@@ -11,6 +11,7 @@ use Facebook\WebDriver\Remote\RemoteWebDriver;
 use Facebook\WebDriver\Remote\DesiredCapabilities;
 use Facebook\WebDriver\WebDriverBy;
 use Facebook\WebDriver\WebDriverExpectedCondition;
+use Iodev\Whois\Factory;
 
 class DomainController extends Controller
 {
@@ -23,7 +24,8 @@ class DomainController extends Controller
         $this->emails = explode(',', env('ALERT_EMAILS'));
     }
 
-    public function runPythonScript($domainName)
+
+    /* public function runPythonScript($domainName)
     {
         $scriptPath = base_path('scripts/scrape.py');
         $command = escapeshellcmd("python3 $scriptPath " . escapeshellarg($domainName));
@@ -54,6 +56,7 @@ class DomainController extends Controller
         // Passer les données à la vue
         return view('scraping-results', ['data' => $data]);
     }
+        */
 
     public function showDomains()
     {
@@ -66,6 +69,7 @@ class DomainController extends Controller
     }
 
     // Scrape les informations d'un domaine en utilisant Selenium WebDriver avec Firefox
+   /*
     public function getDomainInfo($domainName)
     {
         $host = 'http://localhost:4444/wd/hub'; // URL du serveur Selenium
@@ -90,9 +94,12 @@ class DomainController extends Controller
 
         return $info;
     }
+        */
+
+
 
     // Met à jour les informations d'un domaine et les enregistre dans la base de données
-    public function updateDomainInfo($domainName)
+   /* public function updateDomainInfo($domainName)
     {
         $info = $this->getDomainInfo($domainName);
 
@@ -180,5 +187,40 @@ public function checkDomain(Request $request)
 
         return response()->json(['message' => 'Expiration check completed.']);
     }
+        */
+
+    public function getDomainInfo(Request $request)
+{
+    $domain = $request->input('domain');
+
+    // Vérifier si $domain est null ou une chaîne vide
+    if (!$domain) {
+        return view('whois')->withErrors(['error' => 'Domain name is required']);
+    }
+
+    $whois = Factory::get()->createWhois();
+
+    try {
+        $info = $whois->loadDomainInfo($domain);
+
+        // Vérifier si $info est null ou non
+        if ($info !== null) {
+            $domainInfo = [
+                'domain' => $info->getDomainName(),
+                'creation_date' => Carbon::createFromTimestamp($info->getCreationDate())->format('d/m/Y'),
+                'expiration_date' => Carbon::createFromTimestamp($info->getExpirationDate())->format('d/m/Y'),
+                'name_servers' => $info->getNameServers()
+
+            ];
+            return view('whois', ['domainInfo' => $domainInfo]);
+        } else {
+            return view('whois')->withErrors(['error' => 'Domain info not found']);
+        }
+    } catch (\Exception $e) {
+        return view('whois')->withErrors(['error' => $e->getMessage()]);
+    }
+}
+
+
 }
 

@@ -1,6 +1,6 @@
-<!-- resources/views/scraping-results.blade.php -->
+<!--
 
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html>
 <head>
     <title>Scraping Results</title>
@@ -21,3 +21,5 @@
     @endif
 </body>
 </html>
+
+--> 

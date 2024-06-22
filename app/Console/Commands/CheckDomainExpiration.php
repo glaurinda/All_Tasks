@@ -3,49 +3,39 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
-use App\Models\Domain;
-use Illuminate\Support\Facades\Mail;
 use Carbon\Carbon;
-use App\Http\Controllers\DomainController;
+use App\Models\Domain; // Assurez-vous d'importer votre modèle de domaine
 
 class CheckDomainExpiration extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
-    protected $signature = 'check:domain-expiration';
+    protected $signature = 'domain:check-expiration';
+    protected $description = 'Vérifie l\'expiration des domaines et envoie un mail si nécessaire.';
 
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
-    protected $description = 'Check domain expiration dates and send alerts if necessary';
+    public function __construct()
+    {
+        parent::__construct();
+    }
 
-    /**
-     * Execute the console command.
-     *
-     * @return int
-     */
     public function handle()
     {
-        $domainController = new DomainController();
-        $domains = explode(';', env('DOMAINS_LIST'));
+        // Récupérer tous les domaines
+        $domains = Domain::all();
 
         foreach ($domains as $domain) {
-            $info = $domainController->getDomainInfo($domain);
+            $expirationDate = Carbon::createFromFormat('d/m/Y', $domain->expiration_date);
 
-            if ($info && Carbon::parse($info['expiration_date'])->isPast()) {
-                foreach ($domainController->emails as $email) {
-                    Mail::raw("The domain {$domain} has expired. Expiration date: {$info['expiration_date']}", function ($message) use ($email) {
-                        $message->to($email)->subject('Domain Expiration Alert');
-                    });
-                }
+            // Vérifier si le domaine expire dans les 7 jours
+            if ($expirationDate->diffInDays(Carbon::now()) <= 7) {
+                // Envoyer un mail à l'administrateur ou au propriétaire du domaine
+                // Utilisez la fonction d'envoi de mail de Laravel
+                // Par exemple, pour envoyer un mail à l'administrateur :
+                \Mail::raw("Le domaine {$domain->name} expire le {$domain->expiration_date}.", function ($message) {
+                    $message->to('admin@example.com');
+                    $message->subject('Alerte d\'expiration de domaine');
+                });
             }
         }
 
-        return Command::SUCCESS;
+        $this->info('Vérification d\'expiration de domaine terminée.');
     }
 }
