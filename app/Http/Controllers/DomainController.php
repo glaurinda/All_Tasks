@@ -12,6 +12,9 @@ use Facebook\WebDriver\Remote\DesiredCapabilities;
 use Facebook\WebDriver\WebDriverBy;
 use Facebook\WebDriver\WebDriverExpectedCondition;
 use Iodev\Whois\Factory;
+use Illuminate\Http\Request\Facades;
+use Illuminate\Support\Facades\Http;
+
 
 class DomainController extends Controller
 {
@@ -164,13 +167,10 @@ public function checkDomain(Request $request)
 }
 
 
-    protected function sendExpirationAlert($domain, $info)
-    {
-        foreach ($this->emails as $email) {
-            Mail::raw("The domain {$domain} has expired. Expiration date: {$info['expires_date']}", function ($message) use ($email) {
-                $message->to($email)->subject('Domain Expiration Alert');
-            });
-        }
+    protected function sendExpirationAlert($domain)
+{
+    foreach ($this->emails as $email) {
+        Mail::to($email)->send(new DomainExpired($domain));
     }
 
     public function checkExpiration()
@@ -189,6 +189,7 @@ public function checkDomain(Request $request)
     }
         */
 
+
     public function getDomainInfo(Request $request)
 {
     $domain = $request->input('domain');
@@ -200,27 +201,98 @@ public function checkDomain(Request $request)
 
     $whois = Factory::get()->createWhois();
 
-    try {
-        $info = $whois->loadDomainInfo($domain);
 
-        // Vérifier si $info est null ou non
-        if ($info !== null) {
-            $domainInfo = [
-                'domain' => $info->getDomainName(),
-                'creation_date' => Carbon::createFromTimestamp($info->getCreationDate())->format('d/m/Y'),
-                'expiration_date' => Carbon::createFromTimestamp($info->getExpirationDate())->format('d/m/Y'),
-                'name_servers' => $info->getNameServers()
+try {
+    $whois = Factory::get()->createWhois();
+    $response = $whois->lookupDomain($domain);
 
-            ];
-            return view('whois', ['domainInfo' => $domainInfo]);
-        } else {
-            return view('whois')->withErrors(['error' => 'Domain info not found']);
-        }
-    } catch (\Exception $e) {
-        return view('whois')->withErrors(['error' => $e->getMessage()]);
+    if ($response === null) {
+        throw new Exception('No WHOIS information available for this domain.');
     }
+
+    // Obtenir les données brutes WHOIS sous forme de chaîne
+    $rawData = $response->getText();
+
+    // Fonction pour parser les données WHOIS
+    function parseWhoisData($rawData) {
+        $result = [];
+        $lines = explode("\n", $rawData);
+
+        foreach ($lines as $line) {
+            if (strpos($line, ":") !== false) {
+                list($key, $value) = explode(":", $line, 2);
+                $result[trim($key)] = trim($value);
+            }
+        }
+
+        return $result;
+    }
+
+    $domainInfo = parseWhoisData($rawData);
+
+    return view('whois', ['domainInfo' => $domainInfo]);
+} catch (Exception $e) {
+    return view('whois', ['error' => $e->getMessage()]);
+}
 }
 
 
+public function scraper()
+    {
+        // Scraper le montant des frais mensuels sur la page Tarification
+        $tarificationUrl = 'https://ishowo.net/tarification';
+            $tarificationResponse = Http::get($tarificationUrl);
+            $tarificationHtml = $tarificationResponse->body();
+
+            libxml_use_internal_errors(true); // Supprimer les erreurs de chargement
+            $dom = new \DOMDocument();
+            @$dom->loadHTML($tarificationHtml);
+            $xpath = new \DOMXPath($dom);
+
+            $montant = '';
+            $elements = $xpath->query("//span[contains(@class, 'et_pb_sum')]"); // Sélecteur pour la classe 'et_pb_sum'
+            foreach ($elements as $element) {
+                $montant = trim($element->textContent);
+            }
+
+            if (empty($montant)) {
+                $montant = 'Montant non trouvé';
+            }
+
+        // Scraper le bouton Découvrir sur la page Fonctionnalités
+        $fonctionnalitesUrl = 'https://ishowo.net/fonctionnalites';
+        $fonctionnalitesResponse = Http::get($fonctionnalitesUrl);
+        $fonctionnalitesHtml = $fonctionnalitesResponse->body();
+
+        @$dom->loadHTML($fonctionnalitesHtml);
+        $xpath = new \DOMXPath($dom);
+
+        $decouvrir = '';
+        $elements = $xpath->query("//a[contains(@class, 'et_pb_button_2')]");
+        foreach ($elements as $element) {
+            $decouvrir = $element->getAttribute('href');
+        }
+
+        if (empty($decouvrir)) {
+            $decouvrir = 'Bouton Découvrir non trouvé';
+        }
+
+        // Comparer le montant et l'URL du bouton
+        $montantAttendu = 70000;
+        $urlAttendue = 'https://ishowo.net/tester/';
+
+        if ($montant != $montantAttendu || $decouvrir != $urlAttendue) {
+            // Envoyer un email de signalisation
+            $to = 'iwaju.office@gmail.com';
+            $subject = 'Alerte de Scraping';
+            $message = "Le montant ne correspond pas aux valeurs attendues.\n\nMontant: $montant\nURL du bouton: $decouvrir";
+
+            Mail::raw($message, function ($msg) use ($to, $subject) {
+                $msg->to($to)->subject($subject);
+            });
+        }
+
+        return view('scraper', compact('montant', 'decouvrir'));
+    }
 }
 

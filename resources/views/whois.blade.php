@@ -39,23 +39,19 @@
                 </ul>
             </div>
         @endif
+        @if(isset($domainInfo))
+        <h1>Informations sur le domaine</h1>
+        <ul>
+            @foreach($domainInfo as $key => $value)
+                <li><strong>{{ $key }}:</strong> {{ $value }}</li>
+            @endforeach
+        </ul>
+    @elseif(isset($error))
+        <p>Error: {{ $error }}</p>
+    @else
+        <p>No information available for this domain.</p>
+    @endif
 
-        @if (isset($domainInfo))
-            <div class="result-section">
-                <h2>Domain Information</h2>
-                <ul class="list-group">
-                    <li class="list-group-item"><strong>Domain:</strong> {{ $domainInfo['domain'] }}</li>
-                    <li class="list-group-item"><strong>Creation Date:</strong> {{ $domainInfo['creation_date'] }}</li>
-                    <li class="list-group-item"><strong>Expiration Date:</strong> {{ $domainInfo['expiration_date'] }}</li>
-                    <li class="list-group-item"><strong>Name Servers:</strong> {{ implode(', ', $domainInfo['name_servers']) }}</li>
-
-                </ul>
-            </div>
-        @elseif (session('error'))
-            <div class="alert alert-danger">
-                <p>{{ session('error') }}</p>
-            </div>
-        @endif
     </div>
 </body>
 </html>

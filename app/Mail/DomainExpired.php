@@ -5,6 +5,7 @@ namespace App\Mail;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
+use App\Models\Domain;
 
 class DomainExpired extends Mailable
 {
@@ -17,7 +18,7 @@ class DomainExpired extends Mailable
      *
      * @return void
      */
-    public function __construct($domain)
+    public function __construct(Domain $domain)
     {
         $this->domain = $domain;
     }
@@ -29,7 +30,7 @@ class DomainExpired extends Mailable
      */
     public function build()
     {
-        return $this->view('emails.domainExpired')
-                    ->with(['domain' => $this->domain]);
+        return $this->view('emails.domain_expired')
+                    ->subject('Alerte d\'expiration de domaine');
     }
 }

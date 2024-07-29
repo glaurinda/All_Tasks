@@ -13,5 +13,7 @@ Route::post('/enter-domain', [DomainController::class, 'domainCheck']); // Trait
 Route::get('/domains', [DomainController::class, 'showDomains']);
 
 Route::get('/whois', [DomainController::class, 'getDomainInfo']);
+Route::get('scraper', [App\Http\Controllers\DomainController::class, 'scraper'])->name('scraper');
+
 
 
